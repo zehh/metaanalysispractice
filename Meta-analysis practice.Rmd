@@ -1,0 +1,90 @@
+---
+title: "Meta-Analysis in R"
+author: "Pedro Henrique Brant"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+We're going to practice doing a meta-analysis in R. First, let's load the necessary packages.
+
+```{r, results = FALSE, warning = FALSE, message=FALSE, R.}
+## checking if packages are installed, if they aren't, installing them 
+## loading them after
+
+if(!require(tidyverse)){
+        install.packages("tidyverse")
+}
+library(tidyverse)
+
+if(!require(meta)){
+        install.packages("meta")
+}
+library(meta)
+
+if(!require(readxl)){
+        install.packages("readxl")
+}
+library(readxl)
+
+if(!require(googlesheets4)){
+        install.packages("googlesheets4")
+}
+library(googlesheets4)
+```
+
+We're going to read the extracted data from the studies directly from googlesheets. Two outcomes will have their results summarized in this analysis, one dichotomous and one continuous.
+
+```{r, results = FALSE, message = FALSE, warning = FALSE}
+
+## checking if the data has been read already, if it hasn't reading it
+## from googlesheets directly
+
+if(!exists("df", envir = .GlobalEnv, inherits = FALSE)){
+        df <- read_sheet("https://docs.google.com/spreadsheets/d/12mRnNd5HrbpE54d0fL_AtFnlum86g8X5k8MoZRtc92w/")
+}
+
+## reading the dataset for continuous outcome
+if(!exists("df1", envir = .GlobalEnv, inherits = FALSE)){
+        df1 <- read_sheet("https://docs.google.com/spreadsheets/d/1wjJVGk-KobXbmKuhFDC0TIBaRLgIEO9-pV0zDmqQQQ4/")
+}
+```
+
+Let's take a look at the data:
+
+```{r}
+
+head(df)
+head(df1)
+
+```
+
+Now, creating the variables for both meta-analyses, the binary and the continuous.
+
+```{r}
+## meta-analysis variable for the binary outcome, mantel haenszel method
+## reporting Relative risk
+test1 <- metabin(evtto, ntto, evcont, ncont, estudo, data = df, sm = "RR", method = "MH")
+
+## creating a meta-analysis variable for the continous variable, reporting 
+## Standard Mean Differences (Hedges's g is the default)
+
+test2 <- metacont (n.e, mean.e, sd.e, n.c, mean.c, sd.c, study, data = df1,
+                   sm = "SMD")
+
+```
+
+With these variables we can create forest plots. One for each analysis:
+
+```{r, fig.width = 10,fig.height=3}
+
+test1 %>% forest(random = TRUE, common = FALSE, label.c = "Placebo",
+                 label.right = "Favours Placebo", label.left = "Favours TXA",
+                 label.e = "TXA", sortvar = 1/w.random)
+
+test2 %>% forest (sortvar = 1/w.random, common = FALSE, random = TRUE,
+                  label.e = "TXA", label.c = "Placebo",
+                  label.right = "Favours Placebo", label.left = "Favours TXA")
+
+```
+
+In both cases, TXA was better than placebo.
